@@ -1,0 +1,118 @@
+﻿@{
+    ViewData["Title"] = "Home Page";
+}
+<link href="https://cdn.jsdelivr.net/npm/animate.css@3.5.1" rel="stylesheet" type="text/css">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.11.2/css/all.css" rel="stylesheet" type="text/css">
+
+
+<style></style>
+<div id="app">
+    <div class="container">
+        <p>User: @ViewBag.user</p>
+        <div v-if="connectionState == 'RECONNECTED!' || connectionState == 'CONNECTED!'" class="alert alert-success" role="alert">
+            {{connectionState}}
+        </div>
+        <div v-if="connectionState == 'RECONNECTING...'" class="alert alert-warning" role="alert">
+            {{connectionState}}
+        </div>
+        <div v-if="connectionState == 'DISCONNECTED!'" class="alert alert-danger" role="alert">
+            {{connectionState}}
+        </div>
+        <div class="row">&nbsp;</div>
+        <div class="row">
+            <div class="col-2">User</div>
+            <div class="col-4"><input class="form-control"  type="text" id="userInput" v-model="user" /></div>
+        </div>
+        <div class="row">
+            <div class="col-2">Message</div>
+            <div class="col-4"><input class="form-control"  type="text" id="messageInput" v-model="message" /></div>
+        </div>
+        <div class="row">
+            <div class="col-2">Group</div>
+            <div class="col-4"><input class="form-control"  type="text" id="groupInput" v-model="group" /></div>
+        </div>
+        <div class="row">&nbsp;</div>
+        <div class="row">
+            <div class="col-6" style="display: inline-flex;">
+                <input class="form-control" type="button" id="sendButton" value="Send Message" v-on:click="sendMessage" />
+                <input class="form-control" type="button" id="sendGroupButton" value="Send Group Message" v-on:click="sendGroupMessage" />
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-12">
+            <hr />
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-6">
+            <ul>
+                <transition-group name="custom-classes-transition"
+                            enter-active-class="animated tada"
+                            leave-active-class="animated bounceOutRight" tag="p">
+                    <li v-for="(mes, index) in messages" v-bind:key="mes">{{mes}} <i v-on:click="deleteMessage(index)" class="far fa-trash-alt"></i></li>
+                </transition-group>
+            </ul>
+        </div>
+    </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+<script>
+    window.onload = function () {
+        var app = new Vue({
+            el: '#app',
+            data: {
+                message: '',
+                user: '',
+                group: '',
+                messages: [],
+                connectionState: 'DISCONNECTED'
+            },
+            methods: {
+                sendMessage: function () {
+                    connection.invoke("SendMessage", this.user, this.message).catch(function (err) {
+                        return console.error(err.toString());
+                    });
+                },
+                sendGroupMessage: function () {
+                    connection.invoke("SendGroup", this.user, this.group, this.message).catch(function (err) {
+                        return console.error(err.toString());
+                    });
+                },
+                addMessage: function (message) {
+                    this.messages.unshift(message);
+                },
+                deleteMessage: function (index) {
+                    this.messages.splice(index, 1);
+                }
+            }
+        });
+
+        var connection = new signalR.HubConnectionBuilder().withUrl("/chatHub").withAutomaticReconnect([0, 1000, 5000, null]).build();
+        connection.start().then(function () {
+            app.connectionState = 'CONNECTED!';
+        }).catch(function (err) {
+            return console.error(err.toString());
+        });
+
+        //SignalR Events
+        connection.on("ReceiveMessage", function (user, message) {
+            if (user === 'controller') {
+                return alert(user + " says " + message);
+            }
+            app.addMessage(user + " says " + message);
+        });
+        connection.onclose((error) => {
+            app.connectionState = 'DISCONNECTED!';
+        });
+
+        connection.onreconnecting((error) => {
+            app.connectionState = 'RECONNECTING...';
+        });
+        connection.onreconnected((connectionId) => {
+            app.connectionState = 'RECONNECTED!';
+        });
+    }
+
+</script>
+@*<script src="~/js/chat.js"></script>*@

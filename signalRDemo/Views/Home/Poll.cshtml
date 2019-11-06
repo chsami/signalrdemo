@@ -1,0 +1,61 @@
+﻿
+@{
+    ViewData["Title"] = "Poll";
+}
+<style>
+</style>
+<h1>Poll</h1>
+<div style="max-width:50%; float:left">
+    <img onclick="voteFirst()" class="img-fluid" src="https://upload.wikimedia.org/wikipedia/en/thumb/3/30/Java_programming_language_logo.svg/141px-Java_programming_language_logo.svg.png" />
+    <h1 id="voteFirst"></h1>
+</div>
+<div style="max-width:50%; float:right">
+    <img onclick="voteSecond()" class="img-fluid" src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/ee/.NET_Core_Logo.svg/1200px-.NET_Core_Logo.svg.png" />
+    <h1 id="voteSecond"></h1>
+</div>
+
+
+
+
+<script>
+    var self = this;
+    window.onload = function () {
+        self.totalVotesFirst = 0;
+        self.totalVotesSecond = 0;
+        self.voteFirstElement = document.getElementById('voteFirst');
+        self.voteSecondElement = document.getElementById('voteSecond');
+
+        var connection = new signalR.HubConnectionBuilder().withUrl("/chatHub").withAutomaticReconnect([0, 1000, 5000, null]).build();
+        connection.start().then(function () {
+        }).catch(function (err) {
+            return console.error(err.toString());
+        });
+
+
+        connection.on("ReceiveVoteFirst", function () {
+            self.totalVotesFirst++;
+            self.voteFirstElement.innerHTML = "Score: " + self.totalVotesFirst; 
+        });
+
+        connection.on("ReceiveVoteSecond", function () {
+            self.totalVotesSecond++;
+             self.voteSecondElement.innerHTML = "Score: " + self.totalVotesSecond; 
+        });
+
+        self.voteFirst = function () {
+            connection.invoke("VoteFirst").catch(function (err) {
+                        return console.error(err.toString());
+                    });
+        }
+
+        self.voteSecond = function () {
+            connection.invoke("VoteSecond").catch(function (err) {
+                        return console.error(err.toString());
+                    });
+        }
+
+    }
+
+
+
+</script>
